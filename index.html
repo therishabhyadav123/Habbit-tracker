@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Free Online Habit Tracker | Track Daily Goals & Analytics</title>
+    <meta name="description" content="A simple, free, and effective online habit tracker. Track your daily goals, view monthly analytics, and build better habits with our responsive tool.">
+    <meta name="keywords" content="habit, habit tracker, daily tracker, goal tracking, productivity tool, habit checklist, free habit tracker">
+    <meta name="author" content="Habit Tracker App">
+    
+    <meta property="og:title" content="Daily Habit Tracker with Analytics">
+    <meta property="og:description" content="Track your habits and visualize your progress with this free tool.">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+    <style>
+        /* --- General Styling --- */
+        :root {
+            --primary-color: #008080;
+            --primary-dark: #005656;
+            --secondary-color: #007bff;
+            --bg-color: #f7f7f7;
+            --text-color: #333;
+            --white: #ffffff;
+            --light-border: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+            box-sizing: border-box; /* Ensures padding doesn't overflow width */
+        }
+
+        /* --- Header Section --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap; /* Allows wrapping on mobile */
+            gap: 15px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-color);
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .month-selector select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .month-label {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        #notifyBtn {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #notifyBtn:hover { background-color: #e68a00; }
+        
+        /* --- Analytics & Graph Section --- */
+        .analytics-section {
+            display: grid;
+            grid-template-columns: 1fr 2fr; /* 1/3 Stats, 2/3 Graph */
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--light-border);
+        }
+        
+        .stats-box {
+            background-color: #e6f0ff;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .stats-box h3 { margin-top: 0; color: var(--secondary-color); }
+        .stat-item { margin-bottom: 12px; font-size: 15px; }
+        .stat-value { font-weight: bold; color: var(--primary-color); float: right; }
+
+        .graph-box {
+            background-color: var(--white);
+            padding: 15px;
+            border: 1px solid var(--light-border);
+            border-radius: 8px;
+            height: 300px;
+            position: relative;
+        }
+        
+        /* --- Habit Input/List Area --- */
+        .habit-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #newHabitInput {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        #addHabitBtn, .delete-habit-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .delete-habit-btn {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 8px;
+            border-radius: 3px;
+        }
+
+        /* --- Tracker Table Styling --- */
+        .tracker-table-container {
+            overflow-x: auto; /* Critical for Mobile Response */
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+            margin-bottom: 20px;
+            border: 1px solid var(--light-border);
+            border-radius: 8px;
+        }
+
+        .tracker-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 800px; /* Forces scroll on small screens */
+        }
+
+        .tracker-table th, .tracker-table td {
+            border: 1px solid var(--light-border);
+            padding: 0;
+            text-align: center;
+            height: 40px; /* Slightly larger for touch targets */
+        }
+        
+        .tracker-table th {
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #666;
+            width: 30px;
+        }
+        
+        /* Sticky Column for Habit Names */
+        .tracker-table th:first-child,
+        .tracker-table td:first-child {
+            width: 180px;
+            padding: 0 10px;
+            text-align: left;
+            background-color: #fff;
+            position: sticky; /* Keeps names visible while scrolling */
+            left: 0;
+            z-index: 2;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        
+        .tracker-cell {
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.1s;
+        }
+
+        .tracker-cell:hover { background-color: #f1f1f1; }
+        .tracker-cell.checked { background-color: #c9e6ff; }
+        
+        .tracker-cell.checked::after {
+            content: '✓';
+            color: var(--primary-color);
+            font-size: 18px;
+            font-weight: bold;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Color Bar */
+        .color-bar { height: 6px; margin-bottom: 20px; display: flex; border-radius: 3px; overflow: hidden;}
+        .color-bar div { flex-grow: 1; }
+        .c1 { background: #ff5733; } .c2 { background: #ffc300; } .c3 { background: #33ff57; } 
+        .c4 { background: #3357ff; } .c5 { background: #c70039; } .c6 { background: #900c3f; }
+
+        /* --- Footer --- */
+        .footer {
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 13px;
+            color: #777;
+        }
+
+        /* 📱 MOBILE RESPONSIVENESS */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            
+            /* Stack Header */
+            .header { flex-direction: column; align-items: flex-start; }
+            .header-controls { width: 100%; justify-content: space-between; margin-top: 10px; }
+            
+            /* Stack Analytics */
+            .analytics-section { grid-template-columns: 1fr; }
+            .graph-box { height: 250px; }
+
+            /* Adjust Table */
+            .tracker-table th:first-child, 
+            .tracker-table td:first-child {
+                width: 140px; /* Smaller sticky column on mobile */
+                font-size: 14px;
+            }
+            
+            /* Adjust Input */
+            .habit-controls { flex-direction: column; }
+            #addHabitBtn { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    
+    <header class="container">
+        <div class="header">
+            <h1> Habbit Tracker</h1>
+            <div class="header-controls">
+                <button id="notifyBtn" onclick="requestNotificationPermission()">
+                    🔔 Enable Reminders
+                </button>
+
+                <div class="month-selector">
+                    <span class="month-label" id="currentMonthDisplay"></span>
+                    <select id="monthSelect"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="color-bar">
+            <div class="c1"></div><div class="c2"></div><div class="c3"></div><div class="c4"></div>
+            <div class="c5"></div><div class="c6"></div><div class="c1"></div><div class="c3"></div>
+            <div class="c5"></div><div class="c2"></div><div class="c4"></div><div class="c6"></div>
+        </div>
+
+        <div class="analytics-section">
+            <div class="stats-box">
+                <h3>Monthly Overview</h3>
+                <div class="stat-item">Habits Tracked <span id="totalHabitsStat" class="stat-value">0</span></div>
+                <div class="stat-item">Days in Month <span id="daysInMonthStat" class="stat-value">0</span></div>
+                <div class="stat-item">Total Checkmarks <span id="totalCheckmarksStat" class="stat-value">0</span></div>
+                <div class="stat-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:10px;">
+                    Success Rate <span id="overallCompletionStat" class="stat-value">0%</span>
+                </div>
+            </div>
+            <div class="graph-box">
+                <canvas id="habitChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="habit-controls">
+            <input type="text" id="newHabitInput" placeholder="Enter a new habit (e.g., Read 10 pages)...">
+            <button id="addHabitBtn">Add Habit</button>
+        </div>
+
+        <div class="tracker-table-container">
+            <table class="tracker-table" id="habitTrackerTable">
+                </table>
+        </div>
+    </header>
+
+    <footer class="footer">
+        &copy; <span id="year"></span> Habit Tracker | <a href="#">Privacy</a> | <a href="term.html">Terms</a>
+
+
+    </footer>
+
+    <script>
+        const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        // DOM Elements
+        const TABLE = document.getElementById('habitTrackerTable');
+        const MONTH_SELECT = document.getElementById('monthSelect');
+        const MONTH_DISPLAY = document.getElementById('currentMonthDisplay');
+        const INPUT = document.getElementById('newHabitInput');
+        const ADD_BTN = document.getElementById('addHabitBtn');
+        const CHART_CANVAS = document.getElementById('habitChart');
+        const NOTIFY_BTN = document.getElementById('notifyBtn');
+
+        // State Variables
+        let currentMonthIndex;
+        let habits = [];
+        const STORAGE_KEY = 'monthlyHabitTrackerData_v2';
+        let habitChartInstance;
+
+        // --- 🔔 Notification Logic ---
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notifications");
+                return;
+            }
+
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    NOTIFY_BTN.textContent = "🔕 Notifications On";
+                    NOTIFY_BTN.style.backgroundColor = "#28a745"; // Green
+                    checkDailyGoals();
+                }
+            });
+        }
+
+        function checkDailyGoals() {
+            if (Notification.permission !== "granted") return;
+
+            const today = new Date();
+            const currentDay = today.getDate();
+            const currentMonth = today.getMonth();
+
+            // Only check if we are viewing the current month
+            if (currentMonthIndex !== currentMonth) return;
+
+            let pendingHabits = 0;
+            habits.forEach(habit => {
+                const completion = habit.completion[currentMonth] || [];
+                if (!completion.includes(currentDay)) {
+                    pendingHabits++;
+                }
+            });
+
+            if (pendingHabits > 0) {
+                new Notification("Habit Tracker Reminder", {
+                    body: `You have ${pendingHabits} unchecked habits for today! Keep your streak alive.`,
+                    icon: "https://cdn-icons-png.flaticon.com/512/2693/2693507.png" // Generic calendar icon
+                });
+            }
+        }
+
+        // --- Data Management ---
+        function getDaysInMonth(year, monthIndex) {
+            return new Date(year, monthIndex + 1, 0).getDate();
+        }
+
+        function loadData() {
+            const storedData = localStorage.getItem(STORAGE_KEY);
+            if (storedData) {
+                const data = JSON.parse(storedData);
+                habits = data.habits || [];
+                // Default to current month on load, not saved month
+                currentMonthIndex = new Date().getMonth(); 
+            } else {
+                habits = [
+                    { id: 1, name: "Drink Water", completion: {} },
+                    { id: 2, name: "Exercise", completion: {} },
+                    { id: 3, name: "Read Book", completion: {} }
+                ];
+                currentMonthIndex = new Date().getMonth();
+            }
+            
+            // Validate data structure
+            habits = habits.map(h => ({
+                id: h.id,
+                name: h.name,
+                completion: h.completion || {}
+            }));
+            
+            initializeMonthSelector();
+            renderTable();
+            
+            // Check notifications on load if permission already granted
+            if (Notification.permission === "granted") {
+                NOTIFY_BTN.textContent = "🔕 Notifications On";
+                NOTIFY_BTN.style.backgroundColor = "#28a745";
+                setTimeout(checkDailyGoals, 3000); // Check 3 seconds after load
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ habits: habits }));
+        }
+
+        // --- Rendering ---
+        function createHeaderRow(daysInMonth) {
+            let html = '<thead><tr><th>HABITS</th>';
+            for (let i = 1; i <= daysInMonth; i++) {
+                // Highlight today's column
+                const today = new Date();
+                const isToday = (i === today.getDate() && currentMonthIndex === today.getMonth());
+                const style = isToday ? 'background-color: #ffeeba; font-weight:bold;' : '';
+                
+                html += `<th style="${style}">${i}</th>`;
+            }
+            html += '</tr></thead>';
+            return html;
+        }
+
+        function renderTable() {
+            const currentYear = new Date().getFullYear();
+            const daysInMonth = getDaysInMonth(currentYear, currentMonthIndex);
+            
+            MONTH_DISPLAY.textContent = MONTHS[currentMonthIndex].toUpperCase();
+            
+            let tableHTML = createHeaderRow(daysInMonth);
+            tableHTML += '<tbody>';
+            
+            habits.forEach((habit) => {
+                const completionMap = habit.completion[currentMonthIndex] || [];
+                
+                tableHTML += `<tr>`;
+                tableHTML += `<td data-id="${habit.id}">
+                    ${habit.name}
+                    <button class="delete-habit-btn" data-id="${habit.id}" aria-label="Delete Habit">×</button>
+                </td>`;
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const isChecked = completionMap.includes(day);
+                    const checkedClass = isChecked ? ' checked' : '';
+                    
+                    // Highlight today's cell slightly differently if empty
+                    const today = new Date();
+                    const isToday = (day === today.getDate() && currentMonthIndex === today.getMonth());
+                    const todayStyle = (isToday && !isChecked) ? 'border: 2px solid #ffc107;' : '';
+
+                    tableHTML += `<td class="tracker-cell${checkedClass}" 
+                                      style="${todayStyle}"
+                                      data-habit-id="${habit.id}" 
+                                      data-day="${day}">
+                                  </td>`;
+                }
+                tableHTML += `</tr>`;
+            });
+            tableHTML += '</tbody>';
+            TABLE.innerHTML = tableHTML;
+            
+            attachEventListeners();
+            updateAnalytics();
+        }
+
+        function toggleCompletion(event) {
+            const cell = event.currentTarget;
+            const habitId = parseInt(cell.dataset.habitId);
+            const day = parseInt(cell.dataset.day);
+
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit) return;
+
+            if (!habit.completion[currentMonthIndex]) {
+                habit.completion[currentMonthIndex] = [];
+            }
+            
+            const index = habit.completion[currentMonthIndex].indexOf(day);
+            if (index > -1) {
+                habit.completion[currentMonthIndex].splice(index, 1); // Uncheck
+            } else {
+                habit.completion[currentMonthIndex].push(day); // Check
+            }
+            
+            saveData();
+            renderTable(); // Re-render to update visuals and stats
+        }
+
+        function addHabit() {
+            const name = INPUT.value.trim();
+            if (name) {
+                habits.push({ id: Date.now(), name: name, completion: {} });
+                INPUT.value = '';
+                saveData();
+                renderTable();
+            }
+        }
+        
+        function deleteHabit(event) {
+            if(confirm("Delete this habit?")) {
+                const habitId = parseInt(event.currentTarget.dataset.id);
+                habits = habits.filter(h => h.id !== habitId);
+                saveData();
+                renderTable();
+            }
+        }
+
+        function updateAnalytics() {
+            const currentYear = new Date().getFullYear();
+            const daysInMonth = getDaysInMonth(currentYear, currentMonthIndex);
+            
+            let totalCheckmarks = 0;
+            const habitData = [];
+
+            habits.forEach(habit => {
+                const count = (habit.completion[currentMonthIndex] || []).length;
+                totalCheckmarks += count;
+                const rate = daysInMonth > 0 ? Math.round((count / daysInMonth) * 100) : 0;
+                habitData.push({ name: habit.name, rate: rate });
+            });
+
+            const totalPossible = habits.length * daysInMonth;
+            const overallRate = totalPossible > 0 ? Math.round((totalCheckmarks / totalPossible) * 100) : 0;
+
+            // DOM Updates
+            document.getElementById('totalHabitsStat').textContent = habits.length;
+            document.getElementById('daysInMonthStat').textContent = daysInMonth;
+            document.getElementById('totalCheckmarksStat').textContent = totalCheckmarks;
+            document.getElementById('overallCompletionStat').textContent = overallRate + "%";
+            
+            drawChart(habitData);
+        }
+
+        function drawChart(data) {
+            if (habitChartInstance) habitChartInstance.destroy();
+
+            habitChartInstance = new Chart(CHART_CANVAS, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [{
+                        label: 'Completion %',
+                        data: data.map(d => d.rate),
+                        backgroundColor: '#008080',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Make it a horizontal bar chart
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100, // Max percentage is 100
+                            title: {
+                                display: true,
+                                text: 'Percentage Completed'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Habits'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.x + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeMonthSelector() {
+            MONTH_SELECT.innerHTML = '';
+            MONTHS.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = month;
+                MONTH_SELECT.appendChild(option);
+            });
+            MONTH_SELECT.value = currentMonthIndex;
+            MONTH_SELECT.addEventListener('change', (e) => {
+                currentMonthIndex = parseInt(e.target.value);
+                renderTable();
+            });
+        }
+
+        function attachEventListeners() {
+            document.querySelectorAll('.tracker-cell').forEach(cell => cell.addEventListener('click', toggleCompletion));
+            document.querySelectorAll('.delete-habit-btn').forEach(btn => btn.addEventListener('click', deleteHabit));
+        }
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            ADD_BTN.addEventListener('click', addHabit);
+            INPUT.addEventListener('keypress', (e) => { if (e.key === 'Enter') addHabit(); });
+            document.getElementById('year').textContent = new Date().getFullYear();
+        });
+        
+    </script>
+</body>
+</html>
